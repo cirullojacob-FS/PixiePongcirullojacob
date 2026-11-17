@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Module 3 | Visual Libraries | PixiJS</title>
+  </head>
+  <body>
+    <div id="game"></div>
+
+    <script src="https://unpkg.com/pixi.js@8/dist/pixi.min.js"></script>
+
+    <script>
+      async function main() {
+        console.log(
+          "1. Script started. PIXI loaded:",
+          typeof PIXI !== "undefined",
+        );
+
+        const app = new PIXI.Application();
+
+        await app.init({
+          backgroundColor: "#3398b9",
+          width: 800,
+          height: 800,
+          preference: "webgl",
+        });
+
+        console.log("2. App initialized");
+        document.getElementById("game").appendChild(app.canvas);
+
+        const CANVAS_SIZE = 800;
+        const BORDER_THICKNESS = 10;
+        const CIRCLE_RADIUS = 8;
+        const INITIAL_BORDER_COLOR = "#e63946";
+        const HIT_BORDER_COLOR = "#f5ef42";
+
+        function drawBorder(graphic, x, y, width, height, color) {
+          graphic.clear();
+          graphic.rect(x, y, width, height);
+          graphic.fill(color);
+        }
+
+        const borders = {
+          top: {
+            graphic: new PIXI.Graphics(),
+            x: 0,
+            y: 0,
+            width: CANVAS_SIZE,
+            height: BORDER_THICKNESS,
+          },
+          bottom: {
+            graphic: new PIXI.Graphics(),
+            x: 0,
+            y: CANVAS_SIZE - BORDER_THICKNESS,
+            width: CANVAS_SIZE,
+            height: BORDER_THICKNESS,
+          },
+          left: {
+            graphic: new PIXI.Graphics(),
+            x: 0,
+            y: 0,
+            width: BORDER_THICKNESS,
+            height: CANVAS_SIZE,
+          },
+          right: {
+            graphic: new PIXI.Graphics(),
+            x: CANVAS_SIZE - BORDER_THICKNESS,
+            y: 0,
+            width: BORDER_THICKNESS,
+            height: CANVAS_SIZE,
+          },
+        };
+
+        Object.values(borders).forEach((b) => {
+          drawBorder(
+            b.graphic,
+            b.x,
+            b.y,
+            b.width,
+            b.height,
+            INITIAL_BORDER_COLOR,
+          );
+          app.stage.addChild(b.graphic);
+        });
+
+        const circle = new PIXI.Graphics();
+        circle.circle(0, 0, CIRCLE_RADIUS);
+        circle.fill("#f5ef42");
+        circle.x = 450;
+        circle.y = 400;
+        app.stage.addChild(circle);
+
+        const speed = Math.random() * 3 + 3;
+        const angle =
+          (Math.random() * 0.6 + 0.2) * (Math.PI / 2) +
+          Math.floor(Math.random() * 4) * (Math.PI / 2);
+        let xv = Math.cos(angle) * speed;
+        let yv = Math.sin(angle) * speed;
+
+        const hitBorders = new Set();
+
+        const allBordersHitPromise = new Promise((resolve) => {
+          function registerBorderHit(side) {
+            if (!hitBorders.has(side)) {
+              hitBorders.add(side);
+              const b = borders[side];
+              drawBorder(
+                b.graphic,
+                b.x,
+                b.y,
+                b.width,
+                b.height,
+                HIT_BORDER_COLOR,
+              );
+            }
+
+            if (hitBorders.size === 4) {
+              resolve();
+            }
+          }
+
+          const updateLoop = () => {
+            circle.x += xv;
+            circle.y += yv;
+
+            const minBound = BORDER_THICKNESS + CIRCLE_RADIUS;
+            const maxBound = CANVAS_SIZE - BORDER_THICKNESS - CIRCLE_RADIUS;
+
+            if (circle.x >= maxBound) {
+              circle.x = maxBound;
+              xv *= -1;
+              registerBorderHit("right");
+            } else if (circle.x <= minBound) {
+              circle.x = minBound;
+              xv *= -1;
+              registerBorderHit("left");
+            }
+
+            if (circle.y >= maxBound) {
+              circle.y = maxBound;
+              yv *= -1;
+              registerBorderHit("bottom");
+            } else if (circle.y <= minBound) {
+              circle.y = minBound;
+              yv *= -1;
+              registerBorderHit("top");
+            }
+          };
+
+          app.ticker.add(updateLoop);
+          app._updateLoop = updateLoop;
+        });
+
+        allBordersHitPromise.then(() => {
+          app.ticker.remove(app._updateLoop);
+          app.stop();
+
+          setTimeout(() => {
+            alert(
+              "Application completed! The circle has bounced off all four borders.",
+            );
+          }, 50);
+        });
+      }
+
+      main();
+    </script>
+  </body>
+</html>
